@@ -2,7 +2,6 @@
 #include <random>
 #include <iostream>
 #include <thread>
-//time
 #include <chrono>
 
 #include "board.hpp"
@@ -20,9 +19,9 @@ int history_moves[12][64];
 int pv_table[64][64];
 int pv_length[64];
 int follow_pv, score_pv;
+int depp = 0;
 const int full_depth = 4;
 const int red_limit = 3;
-// start time initialization
 auto start = std::chrono::high_resolution_clock::now();
 auto current = std::chrono::high_resolution_clock::now();
 
@@ -44,12 +43,12 @@ int evaluate_board7_3(const Board &b){
         3, 3, 0, 0, 0, 0, 0,
         2, 2, 0, 0, 0, 0, 0,
         2, 2, 0, 0, 0, 0, 0,
-        1, 1, 0, 0, 0, 0, 0,
+        1, 2, 0, 0, 0, 0, 0,
         1, 1, 0, 0, 0, 0, 0,
     };
     int black_pawn_score[49] = {
         0, 0, 0, 0, 0, 1, 1,
-        0, 0, 0, 0, 0, 1, 1,
+        0, 0, 0, 0, 0, 2, 1,
         0, 0, 0, 0, 0, 2, 2,
         0, 0, 0, 0, 0, 2, 2,
         0, 0, 0, 0, 0, 3, 3,
@@ -63,10 +62,10 @@ int evaluate_board7_3(const Board &b){
         4, 2, 0, 0, 0, 0, 0,
         4, 2, 0, 0, 0, 0, 0,
         3, 2, 1, 1, 1, 0, 0,
-        3, 3, 2, 2, 1, 0, 0,
+        3, 3, 1, 1, 1, 0, 0,
     };
     int black_rook_score[49] = {
-        0, 0, 1, 2, 2, 3, 3,
+        0, 0, 1, 1, 1, 3, 3,
         0, 0, 1, 1, 1, 2, 3,
         0, 0, 0, 0, 0, 2, 4,
         0, 0, 0, 0, 0, 2, 4,
@@ -111,51 +110,43 @@ int evaluate_board7_3(const Board &b){
         0, 0, 0, 0, 0, 2, 2,
     };
     int temp_score = 0;
-    if(b.data.w_rook_1 != DEAD){
-        temp_score += 500;
-        temp_score += white_rook_score[getx(b.data.w_rook_1)+(6-gety(b.data.w_rook_1))*7];
-    }
-    if(b.data.w_rook_2 != DEAD){
-        temp_score += 500;
-        temp_score += white_rook_score[getx(b.data.w_rook_2)+(6-gety(b.data.w_rook_2))*7];
-    }
-    if(b.data.w_bishop != DEAD){
-        temp_score += 300;
-        temp_score += white_bishop_score[getx(b.data.w_bishop)+(6-gety(b.data.w_bishop))*7];
-    }
-    if(b.data.w_king != DEAD){
-        temp_score += white_king_score[getx(b.data.w_king)+(6-gety(b.data.w_king))*7];
-    }
-    if(b.data.w_pawn_1 != DEAD){
-        temp_score += 100;
-        temp_score += white_pawn_score[getx(b.data.w_pawn_1)+(6-gety(b.data.w_pawn_1))*7];
-    }
-    if(b.data.w_pawn_2 != DEAD){
-        temp_score += 100;
-        temp_score += white_pawn_score[getx(b.data.w_pawn_2)+(6-gety(b.data.w_pawn_2))*7];
-    }
-    if(b.data.b_rook_1 != DEAD){
-        temp_score -= 500;
-        temp_score -= black_rook_score[getx(b.data.b_rook_1)+(6-gety(b.data.b_rook_1))*7];
-    }
-    if(b.data.b_rook_2 != DEAD){
-        temp_score -= 500;
-        temp_score -= black_rook_score[getx(b.data.b_rook_2)+(6-gety(b.data.b_rook_2))*7];
-    }
-    if(b.data.b_bishop != DEAD){
-        temp_score -= 300;
-        temp_score -= black_bishop_score[getx(b.data.b_bishop)+(6-gety(b.data.b_bishop))*7];
-    }
-    if(b.data.b_king != DEAD){
-        temp_score -= black_king_score[getx(b.data.b_king)+(6-gety(b.data.b_king))*7];
-    }
-    if(b.data.b_pawn_1 != DEAD){
-        temp_score -= 100;
-        temp_score -= black_pawn_score[getx(b.data.b_pawn_1)+(6-gety(b.data.b_pawn_1))*7];
-    }
-    if(b.data.b_pawn_2 != DEAD){
-        temp_score -= 100;
-        temp_score -= black_pawn_score[getx(b.data.b_pawn_2)+(6-gety(b.data.b_pawn_2))*7];
+    std::string s = board_to_str(&b.data);
+    int index = 0;
+    for(int i = 0; i < 56; i++){
+        
+        if(s[i] == 'P'){
+            temp_score += 100;
+            temp_score += white_pawn_score[index];
+        }
+        else if(s[i] == 'p'){
+            temp_score -= 100;
+            temp_score -= black_pawn_score[index];
+        }
+        else if(s[i] == 'R'){
+            temp_score += 500;
+            temp_score += white_rook_score[index];
+        }
+        else if(s[i] == 'r'){
+            temp_score -= 500;
+            temp_score -= black_rook_score[index];
+        }
+        else if(s[i] == 'B'){
+            temp_score += 300;
+            temp_score += white_bishop_score[index];
+        }
+        else if(s[i] == 'b'){
+            temp_score -= 300;
+            temp_score -= black_bishop_score[index];
+        }
+        else if(s[i] == 'K'){
+            temp_score += white_king_score[index];
+        }
+        else if(s[i] == 'k'){
+            temp_score -= black_king_score[index];
+        }
+        if(s[i] != '\n'){
+            index++;
+        }
     }
     return temp_score;
 }
@@ -259,6 +250,7 @@ std::vector<int> Engine::move_sort(Board &b, std::unordered_set<U16> &moves, int
         output[index] = m;
         index++;
     }
+    // shuffle
     sort(output.begin(),output.end(),[&](int m1, int m2){
         return score[m1] > score[m2];
     });
@@ -278,7 +270,7 @@ int Engine::negamax(Board &b, int depth, int alpha, int beta){
     if(b.in_check()){
         depth++;
     }
-    if(depth > 3 && b.in_check() && ply){
+    if(depth > 3 && b.in_check() == 0 && ply){
         Board t = b;
         t.flip_player_();
         int score = -negamax(t,depth-1-2,-beta,-beta-1);
@@ -297,9 +289,9 @@ int Engine::negamax(Board &b, int depth, int alpha, int beta){
         }
     }
     int n_moves = moveset.size();
-    int eval = 0;
+    
     std::vector<int> sorted = move_sort(b,moveset,n_moves);
-    int moves_searched = 0;
+    int moves_searched = 0;    
     for(auto m : sorted){
         Board t = b;
         ply++;
@@ -320,7 +312,17 @@ int Engine::negamax(Board &b, int depth, int alpha, int beta){
         else if(target & 0x08) y = 4;
         else if(target & 0x10) y = 2;
         else if(target & 0x20) y = 1;
-        if(moves_searched == 0) eval = -negamax(t,depth-1,-beta,-alpha);
+        if(target == (1<<3)){
+            std::cout << board_to_str(&b.data) << std::endl;
+            std::cout << move_to_str(m) << std::endl;
+        }
+        int eval = 0;
+        if(moves_searched == 0){
+            eval = -negamax(t,depth-1,-beta,-alpha);
+            if(depth == depp){
+                std::cout<<move_to_str(m)<<" "<<eval<<" "<<b.data.player_to_play<<std::endl;
+            }
+        }
         else{
             if(moves_searched >= full_depth && depth >= red_limit && b.in_check() == 0 && target == 0 && getpromo(m) == 0){
                 eval = -negamax(t,depth-2,-alpha-1,-alpha);
@@ -333,6 +335,10 @@ int Engine::negamax(Board &b, int depth, int alpha, int beta){
                 }
             }
         }
+        if(depth == depp){
+            std::cout<<move_to_str(m)<<" "<<eval<<" "<<b.data.player_to_play<<std::endl;
+        }
+        // std::cout << eval << " " << move_to_str(m) << std::endl;
         ply--;
         moves_searched++;
         
@@ -353,47 +359,49 @@ int Engine::negamax(Board &b, int depth, int alpha, int beta){
             pv_length[ply] = pv_length[ply+1];
         }
     }
+    
     if(moveset.size() == 0){
-        if(b.data.player_to_play == WHITE){
-            if(b.in_check()){
-                return 49000 - ply;
-            }
-            else{
-                return 0;
-            }
-        } 
-        else{
+        // if(b.data.player_to_play == WHITE){
             if(b.in_check()){
                 return -49000 + ply;
             }
             else{
                 return 0;
             }
-        }
+        // } 
+        // else{
+        //     if(b.in_check()){
+        //         return -49000 + ply;
+        //     }
+        //     else{
+        //         return 0;
+        //     }
+        // }
     }
+
     return alpha;
 }
 
 void Engine::find_best_move(const Board& b) {
     // make history moves 0
-    for(int i = 0; i < 12; i++){
-        for(int j = 0; j < 64; j++){
-            history_moves[i][j] = 0;
-        }
-    }
-    // make killer moves 0
-    for(int i = 0; i < 2; i++){
-        for(int j = 0; j < 64; j++){
-            killer_moves[i][j] = 0;
-        }
-    }
-    // make pv table 0
-    for(int i = 0; i < 64; i++){
-        for(int j = 0; j < 64; j++){
-            pv_table[i][j] = 0;
-        }
-        pv_length[i] = 0;
-    }
+    // for(int i = 0; i < 12; i++){
+    //     for(int j = 0; j < 64; j++){
+    //         history_moves[i][j] = 0;
+    //     }
+    // }
+    // // make killer moves 0
+    // for(int i = 0; i < 2; i++){
+    //     for(int j = 0; j < 64; j++){
+    //         killer_moves[i][j] = 0;
+    //     }
+    // }
+    // // make pv table 0
+    // for(int i = 0; i < 64; i++){
+    //     for(int j = 0; j < 64; j++){
+    //         pv_table[i][j] = 0;
+    //     }
+    //     pv_length[i] = 0;
+    // }
 
     // start = std::chrono::high_resolution_clock::now();
 
@@ -408,10 +416,17 @@ void Engine::find_best_move(const Board& b) {
         this->best_move = 0;
     }
     else {
-        int t = negamax(board,7,-50000,50000);
-        // std::cout<<"aaaaaaaaaaaaaaaaaaaaaaaaaaa"<<std::endl;
-        std::cout<<"depth fix nodes: "<<nodes<<std::endl;
-        nodes = 0;
+        int t;
+        // if(board_to_str(&b.data) == "..rbp..\n..rkp..\n..   ..\n..   ..\n..   ..\n..PKR..\n..PBR..\n"){
+        //     // best move is c2b2
+        //     this->best_move = move(10,9);
+        //     return;
+        // }
+        // int t = negamax(board,7,-50000,50000);
+        // int temp_nodes = nodes;
+        // std::cout<<t<<" "<<pv_table[0][0]<<std::endl;
+        // std::cout<<"depth fix nodes: "<<nodes<<std::endl;
+        // nodes = 0;
         // make history moves 0
         for(int i = 0; i < 12; i++){
             for(int j = 0; j < 64; j++){
@@ -434,30 +449,31 @@ void Engine::find_best_move(const Board& b) {
         // iterative till 5
         int alpha = -50000;
         int beta = 50000;
-        for(int i = 1; i < 8; i++){
+        Board temp_board = b;
+        for(int i = 1; i < 14; i++){
             follow_pv = 1;
-            t = negamax(board,i,alpha,beta);
-            std::cout<<"depth: "<<i<<" nodes: "<<nodes<<std::endl;
-            if((t<alpha) || (t>beta)){
-                alpha = -50000;
-                beta = 50000;
-                continue;
+            depp = i;
+            t = negamax(temp_board,i,alpha,beta);
+            // print pv table
+            for(int j = 0; j < pv_length[0]; j++){
+                std::cout<<move_to_str(pv_table[0][j])<<" ";
             }
-            alpha = t - 50;
-            beta = t + 50;
+            std::cout<<std::endl;
+            std::cout<<t<<std::endl;
+            std::cout<<"depth: "<<i<<" nodes: "<<nodes<<std::endl;
+            // if((t<=alpha) || (t>=beta)){
+            //     alpha = -50000;
+            //     beta = 50000;
+            //     continue;
+            // }
+            // alpha = t - 50;
+            // beta = t + 50;
         }
-
-        // current = std::chrono::high_resolution_clock::now();
-        // cout time
-        // std::chrono::duration<double> elapsed = current - start;
-        // std::cout<<"time: "<<elapsed.count()<<std::endl;
+        // std::cout<<"Nodes Difference: "<<temp_nodes-nodes<<std::endl;
         std::cout<<board_to_str(&board.data)<<std::endl;
         this->best_move = pv_table[0][0];
-        // this->best_move = moves[0];
-        // std::cout<<"nodes: "<<nodes<<std::endl;
     }
 
 
-    // just for debugging, to slow down the moves
     // std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 }
